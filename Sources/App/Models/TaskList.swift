@@ -17,10 +17,10 @@ final class TaskList: Model, Content, @unchecked Sendable {
     var id: Int64?
     
     @Parent(key: "user_id")
-    private(set) var user: User
+    var user: User
     
     @Field(key: "name")
-    private(set) var name: String
+    var name: String
     
     @Children(for: \.$list)
     var tasks: [Task]
@@ -31,5 +31,15 @@ final class TaskList: Model, Content, @unchecked Sendable {
         self.id = id
         self.$user.id = userID
         self.name = name
+    }
+}
+
+extension TaskList {
+    func listDTO() -> TaskListDTO.Public {
+        .init(
+            id: self.id!,
+            name: self.name,
+            userId: self.$user.id
+        )
     }
 }

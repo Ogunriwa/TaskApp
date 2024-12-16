@@ -35,3 +35,12 @@ final class Task: Model, Content, @unchecked Sendable {
         self.completed = completed
     }
 }
+extension TaskList {
+    func taskDTO() -> TaskListDTO.Public {
+        .init(
+            id: self.id!,
+            name: self.name,
+            userId: self.$user.id
+        )
+    }
+}

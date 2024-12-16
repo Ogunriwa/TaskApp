@@ -16,13 +16,13 @@ final class User: Model, Content, @unchecked Sendable {
     var id: Int64?
     
     @Field(key: "username")
-    private(set) var username: String
+    var username: String
     
     @Field(key: "email")
-    private(set) var email: String
+    var email: String
     
     @Field(key: "password_hash")
-    private(set) var passwordHash: String
+    var passwordHash: String
     
     @Children(for: \.$user)
     var lists: [TaskList]
@@ -35,4 +35,9 @@ final class User: Model, Content, @unchecked Sendable {
         self.email = email
         self.passwordHash = passwordHash
     }
+    
+    func userDTO() -> UserDTO.Public {
+        .init(id: self.id, username: self.username, email: self.email)
+    }
 }
+
