@@ -34,12 +34,3 @@ final class TaskList: Model, Content, @unchecked Sendable {
     }
 }
 
-extension TaskList {
-    func listDTO() -> TaskListDTO.Public {
-        .init(
-            id: self.id!,
-            name: self.name,
-            userId: self.$user.id
-        )
-    }
-}

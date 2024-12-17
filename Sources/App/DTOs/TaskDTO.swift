@@ -11,9 +11,15 @@ import Vapor
 import Fluent
 
 struct TaskDTO: Content {
+    
+    let id: Int64?
+    var title: String
+    let description: String
+    let completed: Bool
+    
     struct Create: Content {
-        let title: String
-        let description: String
+        var title: String
+        var description: String
     }
     
     struct Public: Content {
