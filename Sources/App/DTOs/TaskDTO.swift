@@ -30,4 +30,13 @@ struct TaskDTO: Content {
         let listId: Int64?
         
     }
+    
+    func toModel(listId: Int64) -> Task {
+        let task = Task()
+        task.title = self.title
+        task.description = self.description
+        task.completed = false  // Default value for new tasks
+        task.$list.id = listId // Set the list relationship
+        return task
+    }
 }
