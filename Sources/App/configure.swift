@@ -22,4 +22,5 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateTask())       // Other tables
     // register routes
     try routes(app)
+    
 }

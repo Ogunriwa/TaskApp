@@ -7,8 +7,8 @@ final class Task: Model, Content, @unchecked Sendable {
     @ID(custom: .id, generatedBy: .database)
     var id: Int64?
     
-    @Parent(key: "list_id")
-    var list: TaskList
+    @OptionalParent(key: "list_id")
+    var list: TaskList?
     
     @Field(key: "title")
     var title: String
@@ -23,13 +23,15 @@ final class Task: Model, Content, @unchecked Sendable {
     
     init(
         id: Int64? = nil,
-        listID: Int64,
+        listID: Int64? = nil,
         title: String,
         description: String,
         completed: Bool = false
     ) {
         self.id = id
-        self.$list.id = listID
+        if let listID = listID {
+            self.$list.id = listID
+        }
         self.title = title
         self.description = description
         self.completed = completed

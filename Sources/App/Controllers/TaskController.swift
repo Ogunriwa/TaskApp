@@ -12,7 +12,7 @@ import Fluent
 struct TaskController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
            // Group all routes under /api/tasks
-           let tasks = routes.grouped("api", "tasks")
+           let tasks = routes.grouped("tasks")
            
            // Auth middleware would go here in production
            // let protected = tasks.grouped(UserAuthMiddleware())
@@ -62,18 +62,21 @@ struct TaskController: RouteCollection {
         // Create task
         @Sendable
         func createTask(req: Request) async throws -> TaskDTO.Public {
+            // Decode the incoming request
             let createDTO = try req.content.decode(TaskDTO.Create.self)
-            guard let listId = req.parameters.get("listId", as: Int64.self) else {
-                throw Abort(.badRequest, reason: "List ID is required")
-            }
             
+            // Create new task - ID will be auto-generated
             let task = Task(
-                listID: listId,
+                
                 title: createDTO.title,
-                description: createDTO.description
+                description: createDTO.description,
+                completed: false
             )
             
+            // Save the task to the database
             try await task.save(on: req.db)
+            
+            // Return the created task with its auto-generated ID
             return task.toDTO()
         }
         
