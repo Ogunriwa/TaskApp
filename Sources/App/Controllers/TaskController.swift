@@ -12,8 +12,9 @@ import Fluent
 struct TaskController: RouteCollection {
     func boot(routes: RoutesBuilder) throws {
            // Group all routes under /api/tasks
-           let tasks = routes.grouped("tasks")
-           
+          
+        let protected = routes.grouped(UserToken.authenticator(), User.guardMiddleware())
+        let tasks = protected.grouped("tasks")
            // Auth middleware would go here in production
            // let protected = tasks.grouped(UserAuthMiddleware())
            
@@ -25,113 +26,170 @@ struct TaskController: RouteCollection {
            
            // POST /api/tasks - Create a new task
            tasks.post(use: createTask)
-           
+        
+            // PATCH /api/tasks/:taskId/complete - Toggle task completion status
+           tasks.patch(":taskId", "toggle", use: toggleComplete)
+        
+            
            // PUT /api/tasks/:taskId - Update an existing task
            tasks.put(":taskId", use: updateTask)
            
            // DELETE /api/tasks/:taskId - Delete a task
            tasks.delete(":taskId", use: deleteTask)
-           
-           // Additional functionality
-           
-           // GET /api/tasks/list/:listId - Get all tasks for a specific list
-           tasks.get("list", ":listId", use: getTasksByList)
-           
-           // PATCH /api/tasks/:taskId/complete - Toggle task completion status
-           tasks.patch(":taskId", "complete", use: toggleTaskComplete)
-       }
+        
+    }
     
     // Get all tasks
     @Sendable
     func getAllTasks(req: Request) async throws -> [TaskDTO.Public] {
+        let user = try req.auth.require(User.self)
+        
+        guard let taskList = try await TaskList.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .first() else {
+            throw Abort(.notFound, reason: "Task list not found")
+        }
+        
         let tasks = try await Task.query(on: req.db)
-            .with(\.$list)
+            .filter(\.$list.$id == taskList.id!)
             .all()
+        
         return tasks.map { $0.toDTO() }
     }
     
+    
+    
+    // Get single tasks
+    
     @Sendable
         func getTask(req: Request) async throws -> TaskDTO.Public {
-            guard let task = try await Task.find(req.parameters.get("taskId"), on: req.db) else {
-                throw Abort(.notFound, reason: "Task not found")
+            let user = try req.auth.require(User.self)
+            
+            guard let taskId = req.parameters.get("taskId", as: Int64.self) else {
+                throw Abort(.badRequest, reason: "Invalid task ID")
             }
-            try await task.$list.load(on: req.db)
+            
+            guard let task = try await Task.query(on: req.db)
+                .filter(\.$id == taskId)
+                .join(TaskList.self, on: \Task.$list.$id == \TaskList.$id)
+                .filter(TaskList.self, \.$user.$id == user.id!)
+                .first() else {
+                throw Abort(.notFound, reason: "Task not found or unauthorized")
+            }
+            
             return task.toDTO()
+    }
+        
+    
+    // Create task
+    
+    @Sendable
+    func createTask(req: Request) async throws -> TaskDTO.Public {
+        // Get authenticated user
+        let user = try req.auth.require(User.self)
+        
+        // Get user's task list (they only have one)
+        guard let taskList = try await TaskList.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .first() else {
+            throw Abort(.notFound, reason: "Task list not found")
         }
         
-        // Create task
-        @Sendable
-        func createTask(req: Request) async throws -> TaskDTO.Public {
-            // Decode the incoming request
-            let createDTO = try req.content.decode(TaskDTO.Create.self)
-            
-            // Create new task - ID will be auto-generated
-            let task = Task(
-                
-                title: createDTO.title,
-                description: createDTO.description,
-                completed: false
-            )
-            
-            // Save the task to the database
-            try await task.save(on: req.db)
-            
-            // Return the created task with its auto-generated ID
-            return task.toDTO()
-        }
+        // Create and save the task
+        let createDTO = try req.content.decode(TaskDTO.Create.self)
+        let task = Task(
+            listID: taskList.id!,
+            title: createDTO.title,
+            description: createDTO.description
+        )
+        
+        try await task.save(on: req.db)
+        return task.toDTO()
+    }
+        
         
         // Update task
-        @Sendable
-        func updateTask(req: Request) async throws -> TaskDTO.Public {
-            guard let task = try await Task.find(req.parameters.get("taskId"), on: req.db) else {
-                throw Abort(.notFound)
-            }
-            
-            let updateDTO = try req.content.decode(TaskDTO.self)
-            
-            task.title = updateDTO.title
-            task.description = updateDTO.description
-            
-            try await task.save(on: req.db)
-            return task.toDTO()
-        }
-        
-        // Delete task
-        @Sendable
+    @Sendable
+       func updateTask(req: Request) async throws -> TaskDTO.Public {
+           let user = try req.auth.require(User.self)
+           
+           guard let taskId = req.parameters.get("taskId", as: Int64.self) else {
+               throw Abort(.badRequest, reason: "Invalid task ID")
+           }
+           
+           // Verify task exists and belongs to user
+           guard let task = try await Task.query(on: req.db)
+               .filter(\.$id == taskId)
+               .join(TaskList.self, on: \Task.$list.$id == \TaskList.$id)
+               .filter(TaskList.self, \.$user.$id == user.id!)
+               .first() else {
+               throw Abort(.notFound, reason: "Task not found or unauthorized")
+           }
+           
+           let updateDTO = try req.content.decode(TaskDTO.Update.self)
+           
+           // Update task properties
+           if let title = updateDTO.title {
+               task.title = title
+           }
+           if let description = updateDTO.description {
+               task.description = description
+           }
+           
+           try await task.save(on: req.db)
+           return task.toDTO()
+       }
+       
+    
+    // Delete task
+    @Sendable
         func deleteTask(req: Request) async throws -> HTTPStatus {
-            guard let task = try await Task.find(req.parameters.get("taskId"), on: req.db) else {
-                throw Abort(.notFound)
+            let user = try req.auth.require(User.self)
+            
+            guard let taskId = req.parameters.get("taskId", as: Int64.self) else {
+                throw Abort(.badRequest, reason: "Invalid task ID")
             }
+            
+            // Verify task exists and belongs to user
+            guard let task = try await Task.query(on: req.db)
+                .filter(\.$id == taskId)
+                .join(TaskList.self, on: \Task.$list.$id == \TaskList.$id)
+                .filter(TaskList.self, \.$user.$id == user.id!)
+                .first() else {
+                throw Abort(.notFound, reason: "Task not found or unauthorized")
+            }
+            
             try await task.delete(on: req.db)
             return .noContent
-        }
-        
-        // Get tasks by list
-        @Sendable
-        func getTasksByList(req: Request) async throws -> [TaskDTO.Public] {
-            guard let listId = req.parameters.get("listId", as: Int64.self) else {
-                throw Abort(.badRequest)
+    }
+    
+    
+    
+
+
+    // Toggle task completion status
+    @Sendable
+        func toggleComplete(req: Request) async throws -> TaskDTO.Public {
+            let user = try req.auth.require(User.self)
+            
+            guard let taskId = req.parameters.get("taskId", as: Int64.self) else {
+                throw Abort(.badRequest, reason: "Invalid task ID")
             }
             
-            let tasks = try await Task.query(on: req.db)
-                .filter(\.$list.$id == listId)
-                .all()
-            
-            return tasks.map { $0.toDTO() }
-        }
-        
-    
-    
-        // Toggle task completion status
-        @Sendable
-        func toggleTaskComplete(req: Request) async throws -> TaskDTO.Public {
-            guard let task = try await Task.find(req.parameters.get("taskId"), on: req.db) else {
-                throw Abort(.notFound)
+            guard let task = try await Task.query(on: req.db)
+                .filter(\.$id == taskId)
+                .join(TaskList.self, on: \Task.$list.$id == \TaskList.$id)
+                .filter(TaskList.self, \.$user.$id == user.id!)
+                .first() else {
+                throw Abort(.notFound, reason: "Task not found or unauthorized")
             }
             
             task.completed.toggle()
             try await task.save(on: req.db)
             return task.toDTO()
-        }
+    }
+
     
 }
+
+

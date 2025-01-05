@@ -31,6 +31,11 @@ struct TaskDTO: Content {
         
     }
     
+    struct Update: Content {
+            var title: String?        // Optional - only update if provided
+            var description: String?  // Optional - only update if provided
+    }
+    
     func toModel(listId: Int64) -> Task {
         let task = Task()
         task.title = self.title

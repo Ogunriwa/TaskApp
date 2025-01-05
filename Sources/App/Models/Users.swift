@@ -41,3 +41,54 @@ final class User: Model, Content, @unchecked Sendable {
     }
 }
 
+
+extension User {
+    
+    struct Create: Content {
+        var username: String
+        var email: String
+        var password: String
+        var confirmPassword: String
+    }
+}
+
+extension User.Create: Validatable {
+    static func validations(_ validations: inout Validations) {
+        validations.add("name", as: String.self, is: !.empty)
+        validations.add("username", as: String.self, is: !.empty && .count(3...) && .alphanumeric)  // Username validation
+        validations.add("password", as: String.self, is: .count(8...))
+    }
+}
+
+
+
+extension User: ModelAuthenticatable {
+    
+    
+    
+    static let usernameKey: KeyPath<User, Field<String>> = \User.$username
+    static let passwordHashKey: KeyPath<User, Field<String>> = \User.$passwordHash
+    
+    
+    func verify(password: String) throws -> Bool {
+        
+        try Bcrypt.verify(password, created: self.passwordHash)
+        
+    }
+    
+    
+}
+
+extension User {
+    
+    func genToken() throws -> UserToken {
+        
+        try.init(
+            token: [UInt8].random(count:16).base64,
+            userID: self.requireID()
+        )
+    }
+}
+
+    
+
