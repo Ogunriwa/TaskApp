@@ -19,7 +19,9 @@ public func configure(_ app: Application) async throws {
 
     app.migrations.add(CreateUser())       // Create users table first
     app.migrations.add(CreateTaskList())   // Now safe to reference users
-    app.migrations.add(CreateTask())       // Other tables
+    app.migrations.add(CreateTask())
+    app.migrations.add(CreateUserToken())
+    // Other tables
     // register routes
     try routes(app)
     

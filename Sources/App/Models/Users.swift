@@ -36,9 +36,6 @@ final class User: Model, Content, @unchecked Sendable {
         self.passwordHash = passwordHash
     }
     
-    func userDTO() -> UserDTO.Public {
-        .init(id: self.id, username: self.username, email: self.email)
-    }
 }
 
 
@@ -54,29 +51,20 @@ extension User {
 
 extension User.Create: Validatable {
     static func validations(_ validations: inout Validations) {
-        validations.add("name", as: String.self, is: !.empty)
+       
         validations.add("username", as: String.self, is: !.empty && .count(3...) && .alphanumeric)  // Username validation
+        validations.add("email", as: String.self, is: .email)
         validations.add("password", as: String.self, is: .count(8...))
     }
 }
 
-
-
 extension User: ModelAuthenticatable {
-    
-    
-    
-    static let usernameKey: KeyPath<User, Field<String>> = \User.$username
-    static let passwordHashKey: KeyPath<User, Field<String>> = \User.$passwordHash
-    
+    static let usernameKey = \User.$email // Since you're using email to login
+    static let passwordHashKey = \User.$passwordHash
     
     func verify(password: String) throws -> Bool {
-        
         try Bcrypt.verify(password, created: self.passwordHash)
-        
     }
-    
-    
 }
 
 extension User {

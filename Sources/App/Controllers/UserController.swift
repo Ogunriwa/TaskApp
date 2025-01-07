@@ -82,7 +82,7 @@ struct UserController: RouteCollection {
             guard let user = try await User.query(on: req.db)
                 .filter(\.$email == credentials.email)
                 .first() else {
-                throw Abort(.notFound, reason: "User not found")
+                    throw Abort(.unauthorized, reason: "Invalid credentials")
                 }
             
             guard try user.verify(password:credentials.password) else {

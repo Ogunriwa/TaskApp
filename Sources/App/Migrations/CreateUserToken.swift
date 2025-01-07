@@ -9,7 +9,7 @@ import Foundation
 import Fluent
 
 
-struct Migration: AsyncMigration {
+struct CreateUserToken: AsyncMigration {
     
     var name: String { "CreateUserToken" }
     
