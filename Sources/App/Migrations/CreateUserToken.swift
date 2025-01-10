@@ -16,7 +16,7 @@ struct CreateUserToken: AsyncMigration {
     func prepare(on database: Database) async throws {
         
         try await database.schema("user_tokens")
-            .id()
+            .field("id", .int64, .identifier(auto: true))
             .field("token", .string, .required)
             .field("user_id", .uuid, .required, .references("users", "id"))
             .unique(on: "token")
