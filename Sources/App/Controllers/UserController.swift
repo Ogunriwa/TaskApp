@@ -144,3 +144,18 @@ extension UserController {
         }
 }
 
+
+extension UserController {
+    @Sendable
+    func logout(req: Request) async throws -> HTTPStatus {
+        // Get the authenticated user
+        let user = try req.auth.require(User.self)
+        
+        // Find and delete their token
+        try await UserToken.query(on: req.db)
+            .filter(\.$user.$id == user.id!)
+            .delete()
+        
+        return .ok
+    }
+}
