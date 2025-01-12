@@ -23,8 +23,9 @@ struct UserController: RouteCollection {
         let user_access = routes.grouped(UserToken.authenticator(), User.guardMiddleware())
         
         user_access.get("user", use: self.getCurrentUser)
+        user_access.post("logout", use: self.logout)
         
-        users.get(":userID", "tasks", use: getUserTasks)
+        user_access.get(":userID", "tasks", use: getUserTasks)
     }
 
 
