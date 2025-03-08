@@ -1,5 +1,5 @@
 {
-  "originHash" : "8531b58ed3d44b2c6cab48458d5a614a2efb214f49739bb5712d9d85ec48c833",
+  "originHash" : "d30a05c2ece65b2bf1e2cf2d5eb1e208573b4cedfb6ddc2665d89152c5899a2f",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -53,6 +53,15 @@
       "state" : {
         "revision" : "fd57101e426d3edf66a32ba63a7d0b8ced4d7499",
         "version" : "2.10.0"
+      }
+    },
+    {
+      "identity" : "mailgun",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/vapor-community/mailgun.git",
+      "state" : {
+        "revision" : "cb9e4d6d1b760739bf288b07c41bb01bbfe578c5",
+        "version" : "5.0.0"
       }
     },
     {

@@ -40,9 +40,8 @@ final class User: Model, Content, @unchecked Sendable {
 
 
 extension User {
-    
     struct Create: Content {
-        var username: String
+        var username: String?
         var email: String
         var password: String
         var confirmPassword: String
@@ -51,13 +50,12 @@ extension User {
 
 extension User.Create: Validatable {
     static func validations(_ validations: inout Validations) {
-       
-        validations.add("username", as: String.self, is: !.empty && .count(3...) && .alphanumeric)  // Username validation
+        // Custom validation for optional username
+        validations.add("username", as: String?.self, is: .nil || (!.empty && .count(3...) && .alphanumeric))
         validations.add("email", as: String.self, is: .email)
         validations.add("password", as: String.self, is: .count(8...))
     }
 }
-
 extension User: ModelAuthenticatable {
     static let usernameKey = \User.$email // Since you're using email to login
     static let passwordHashKey = \User.$passwordHash
@@ -76,6 +74,15 @@ extension User {
             userID: self.requireID()
         )
     }
+}
+
+extension User {
+    
+    struct Update: Content {
+            var username: String?
+            var email: String?
+            var password: String?
+        }
 }
 
     

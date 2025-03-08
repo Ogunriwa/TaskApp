@@ -18,14 +18,17 @@ struct UserController: RouteCollection {
         users.post(use: self.create)
         
         let user_protected = routes.grouped(User.authenticator())
-        user_protected.post("login",  use: self.login)
+        user_protected.post("login",  use: self.login) // LOG IN USER
         
         let user_access = routes.grouped(UserToken.authenticator(), User.guardMiddleware())
         
-        user_access.get("user", use: self.getCurrentUser)
-        user_access.post("logout", use: self.logout)
+        user_access.get("user", use: self.getCurrentUser) // get the current user
+        user_access.post("logout", use: self.logout) // log out
         
         user_access.get(":userID", "tasks", use: getUserTasks)
+        
+        user_access.put("user", use: updateUser)
+        user_access.delete("user", use: deleteUser)
     }
 
 
@@ -159,4 +162,31 @@ extension UserController {
         
         return .ok
     }
+    
+    
+    @Sendable
+        func updateUser(req: Request) async throws -> UserDTO.Public {
+            let user = try req.auth.require(User.self)
+            let updateData = try req.content.decode(User.Update.self)
+            
+            if let newUsername = updateData.username {
+                user.username = newUsername
+            }
+            if let newEmail = updateData.email {
+                user.email = newEmail
+            }
+            if let newPassword = updateData.password {
+                user.passwordHash = try Bcrypt.hash(newPassword)
+            }
+            
+            try await user.save(on: req.db)
+            return UserDTO.Public(user: user)
+        }
+
+        @Sendable
+        func deleteUser(req: Request) async throws -> HTTPStatus {
+            let user = try req.auth.require(User.self)
+            try await user.delete(on: req.db)
+            return .noContent
+        }
 }

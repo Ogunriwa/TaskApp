@@ -18,7 +18,7 @@ struct TaskController: RouteCollection {
         let edit = protected.grouped("edit")
            // Auth middleware would go here in production
            // let protected = tasks.grouped(UserAuthMiddleware())
-           
+            
            // GET /tasks - Retrieve all tasks
            tasks.get(use: getAllTasks)
            
